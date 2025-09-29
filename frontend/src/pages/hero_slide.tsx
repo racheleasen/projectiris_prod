@@ -19,7 +19,7 @@ export default function HeroSlide() {
             <p className={styles.subtitle}>Free access to gaze-assisted communication.</p>
             <div className={styles.ctaGroup}>
               <Link to="/get-started" className={styles.ctaPrimary}>Get Started</Link>
-              <a href="#learn-more" className={styles.ctaSecondary}>Learn More</a>
+              <Link to="/learn-more" className={styles.ctaSecondary}>Learn More</Link>
             </div>
 
             {/* Scroll Cue */}
