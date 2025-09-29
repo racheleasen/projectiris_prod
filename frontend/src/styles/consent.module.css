@@ -1,0 +1,52 @@
+.consentWrap {
+    width: 100%;
+    min-height: calc(70dvh - var(--header-h));
+    display: grid;
+    place-items: center;
+    padding: 24px 10px;
+  }
+  
+  .consentCard {
+    width: min(100%, 75%);
+    background: #fff;
+    color: #000;
+    border-radius: 12px;
+    box-shadow: 0 6px 28px rgba(0,0,0,0.35);
+    padding: 32px 24px;
+    text-align: left;
+  }
+  
+  .title {
+    margin: 0 0 0.25rem 0;
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    color: #000;
+  }
+  
+  .subtitle {
+    color: #50555a;
+    font-weight: 300;
+  }
+  
+  .lead {
+    color: #333;
+    line-height: 1.55;
+    margin: 0.75rem 0;
+  }
+  
+  .consentButton {
+    padding: 0.75rem 1.25rem;
+    font-size: 1rem;
+    margin-top: 1.25rem;
+    border: 1px solid #0afe0a;
+    border-radius: 8px;
+    background-color: #000;
+    color: #0afe0a;
+    cursor: pointer;
+    transition: transform 120ms ease, background 120ms ease, color 120ms ease;
+  }
+  .consentButton:hover {
+    background-color: #0afe0a;
+    color: #000;
+    transform: translateY(-1px);
+  }
+  

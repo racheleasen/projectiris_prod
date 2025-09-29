@@ -1,0 +1,18 @@
+services:
+  api:
+    build: ./server
+    ports: ["8080:8080"]
+    environment:
+      - EVENT_PATH=/data/events.jsonl
+    volumes:
+      - ./data:/data
+  web:
+    working_dir: /app
+    image: node:20-alpine
+    command: sh -c "npm ci && npm run dev"
+    ports: ["5173:5173"]
+    environment:
+      - VITE_API_WS_URL=ws://localhost:8080/ws/gaze
+      - VITE_EVENTS_URL=http://localhost:8080/events
+    volumes:
+      - ./frontend:/app

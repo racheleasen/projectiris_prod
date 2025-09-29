@@ -1,0 +1,82 @@
+/* styles/standard_pages.module.css */
+.standardPage {
+    min-height: calc(100dvh - var(--header-h));
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 32px 20px;
+    background: #000;
+  }
+  
+  .standardCard {
+    width: min(100%, 1050px);
+    background: #000;
+    color: #fff;
+    border-radius: 12px;
+    padding: 20px 32px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  }
+  
+  .standardCard h1 {
+    font-size: clamp(2rem, 3vw, 2.4rem);
+    margin-bottom: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+  }
+  
+  .standardCard p {
+    margin-bottom: 1.25rem;
+    font-size: 1rem;
+    color: #ddd;
+  }
+  
+  /* LearnMore features */
+  .features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 24px;
+    margin: 2rem 0;
+  }
+  
+  .feature {
+    background: #f9f9f9;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .feature:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+  }
+  
+  .featureIcon {
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+    color: #4b4d4b;
+  }
+  
+  .feature h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #111;
+  }
+  
+  .feature p {
+    font-size: 0.95rem;
+    color: #444;
+  }
+  
+  .dedication {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #444;
+    font-style: italic;
+    color: #ccc;
+    text-align: center;
+    font-size: 0.95rem;
+  }
+  

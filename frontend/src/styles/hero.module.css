@@ -1,0 +1,200 @@
+/* === HERO CONTAINER === */
+.hero {
+  position: relative;
+  background: #000;
+  min-height: calc(100dvh - var(--header-h));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* === CONTENT WRAPPER === */
+.heroContentWrapper {
+  position: relative;
+  max-width: 1100px;
+  width: 100%;
+  padding: 0rem 10vw;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-direction: row;
+}
+
+/* === BUBBLE BACKGROUND === */
+.bubbleWrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.bubble {
+  position: absolute;
+  border-radius: 50%;
+  filter: drop-shadow(0 0 20px rgba(0, 0, 0, 0.5));
+}
+
+.bubbleGreen {
+  background: #00ff00;
+  width: clamp(200px, 20vw, 400px);
+  height: clamp(200px, 20vw, 400px);
+  top: -10%;
+  left: 10%;
+  z-index: 1;
+}
+
+.bubbleWhite {
+  background: #fff;
+  width: clamp(150px, 16vw, 280px);
+  height: clamp(150px, 16vw, 280px);
+  top: 20%;
+  left: 18%;
+  z-index: 2;
+}
+
+/* === TEXT SECTION === */
+.content {
+  position: absolute;
+  z-index: 10;
+  top: -2rem;
+  left: 0rem;
+  width: 100vw;
+  max-width: 1100px;
+  height: 100%;
+  display: absolute;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+/* FULLSCREEN OVERLAY BOX */
+.textBox {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 1rem;
+  padding: 0rem;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
+  text-align: center;
+}
+
+/* === TYPOGRAPHY === */
+.title {
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  font-weight: 600;
+  margin-bottom: 0rem;
+  color: #fff;
+  text-align: left;
+}
+
+.subtitle {
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  font-weight: 300;
+  margin-bottom: 3rem;
+  color: #ccc;
+}
+
+/* === CTA BUTTONS === */
+.ctaGroup {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.ctaPrimary,
+.ctaSecondary {
+  padding: 0.75rem 1.6rem;
+  border-radius: 1000px;
+  font-weight: 500;
+  font-size: 1.15rem;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  min-width: 130px;
+  text-align: center;
+}
+
+.ctaPrimary {
+  background: #00e600;
+  color: #000;
+}
+
+.ctaPrimary:hover {
+  background: #00e600;
+}
+
+.ctaSecondary {
+  border: 2px solid #fff;
+  color: #fff;
+}
+
+.ctaSecondary:hover {
+  background: #000000;
+  color: #00e600;
+  border: 2px solid #00e600;
+
+}
+
+/* === MOBILE STYLES === */
+@media (max-width: 1100px) {
+  .heroContentWrapper {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .bubbleGreen {
+    width: clamp(150px, 30vw, 250px);
+    height: clamp(150px, 30vw, 250px);
+    top: -5%;
+    left: 5%;
+  }
+
+  .bubbleWhite {
+    width: clamp(120px, 25vw, 180px);
+    height: clamp(120px, 25vw, 180px);
+    top: 5%;
+    left: -10%;
+  }
+
+  .content {
+    justify-content: center;
+    align-items: center;
+  }
+
+  .textBox {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    padding: 1rem;
+    text-align: center;
+    align-items: center;
+  }
+
+  .title,
+  .subtitle {
+    text-align: center;
+  }
+
+  .ctaGroup {
+    justify-content: center;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 0.75rem;
+  }
+
+  .ctaPrimary,
+  .ctaSecondary {
+    flex: 1 1 auto;
+    font-size: 1rem;
+  }
+}
