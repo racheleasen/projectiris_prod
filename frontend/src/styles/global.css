@@ -228,3 +228,26 @@ canvas {
 html {
   scroll-behavior: smooth;
 }
+
+/* === DEFAULT CTA BUTTON === */
+.ctaDefault {
+  padding: 0.75rem 1.6rem;
+  border-radius: 1000px;
+  font-weight: 500;
+  font-size: 1.15rem;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  min-width: 130px;
+  text-align: center;
+
+  background: #000000;   /* black background */
+  color: #00e600;        /* white text */
+  border: 2px solid #000;
+}
+
+.ctaDefault:hover {
+  background: #00e600; /* bright green on hover */
+  border: 2px solid #00e600;
+  color: #000;         /* switch to black text */
+}

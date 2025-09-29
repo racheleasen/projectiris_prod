@@ -1,82 +1,74 @@
+// src/pages/GazeDemo.tsx
 import React, { useEffect, useRef, useState } from "react";
 import { Results } from "@mediapipe/face_mesh";
-import { GazeProjectionTS } from "../components/compute";
+import { GazeProjectionTS, GazeResult } from "../components/compute_gaze";
+import BlinkManager from "../components/blink_manager";
 
-interface Props { consent: boolean }
-
-function drawVector(
-  ctx: CanvasRenderingContext2D,
-  wCSS: number,
-  hCSS: number,
-  origin: [number, number],
-  x: number,
-  y: number
-) {
-  const cx = origin[0] * wCSS;
-  const cy = origin[1] * hCSS;
-  const tipX = cx + x * wCSS;
-  const tipY = cy + y * hCSS;
-
-  ctx.clearRect(0, 0, wCSS, hCSS);
-  ctx.strokeStyle = "#00FFFF";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.lineTo(tipX, tipY);
-  ctx.stroke();
-
-  ctx.fillStyle = "#FFFF00";
-  ctx.beginPath();
-  ctx.arc(tipX, tipY, 4, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = "#FF00FF";
-  ctx.beginPath();
-  ctx.arc(cx, cy, 4, 0, Math.PI * 2);
-  ctx.fill();
+interface Props {
+  consent: boolean;
+  active: boolean;
+  onToggleCamera: () => void;
 }
 
-export default function GazeDemo({ consent }: Props) {
+type Target = {
+  id: string;
+  label: string;
+  x: string;
+  y: string;
+};
+
+const TARGETS: Target[] = [
+  { id: "tl", label: "Target 1", x: "25%", y: "25%" },
+  { id: "tr", label: "Target 2", x: "75%", y: "25%" },
+  { id: "bl", label: "Target 3", x: "25%", y: "75%" },
+  { id: "br", label: "Target 4", x: "75%", y: "75%" },
+];
+
+const DWELL_TIME = 1200;
+
+function euclidean(a: any, b: any) {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+export default function GazeDemo({ consent, active }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const [cameraConsent, setCameraConsent] = useState(false);
-  const [active, setActive] = useState(false);
   const [debug, setDebug] = useState("idle");
-  const [gaze, setGaze] = useState<any>(null);
+  const [gaze, setGaze] = useState<GazeResult | null>(null);
   const [heapUsage, setHeapUsage] = useState("");
+  const [blinkText, setBlinkText] = useState("");
+
+  const [selected, setSelected] = useState<string[]>([]);
+  const [hoverTarget, setHoverTarget] = useState<string | null>(null);
+  const dwellStartRef = useRef<number | null>(null);
 
   const lastSetRef = useRef(0);
-  const lastDrawRef = useRef(0);
   const lastSendRef = useRef(0);
   const heapIntervalRef = useRef<number | null>(null);
   const animationIdRef = useRef<number>(0);
-  const lastOutRef = useRef<{ ox: number; oy: number; x: number; y: number } | null>(null);
+
+  const blinkManager = useRef(new BlinkManager()).current;
 
   const resizeCanvasToDisplaySize = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const dpr = window.devicePixelRatio || 1;
     const wCSS = canvas.clientWidth;
     const hCSS = canvas.clientHeight;
     const w = Math.max(1, Math.floor(wCSS * dpr));
     const h = Math.max(1, Math.floor(hCSS * dpr));
-
     if (canvas.width !== w || canvas.height !== h) {
       canvas.width = w;
       canvas.height = h;
     }
-
     const ctx = canvas.getContext("2d");
     if (ctx) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      if (lastOutRef.current) {
-        const { ox, oy, x, y } = lastOutRef.current;
-        drawVector(ctx, wCSS, hCSS, [ox, oy], x, y);
-      } else {
-        ctx.clearRect(0, 0, wCSS, hCSS);
-      }
+      ctx.clearRect(0, 0, wCSS, hCSS);
     }
   };
 
@@ -102,7 +94,7 @@ export default function GazeDemo({ consent }: Props) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
-          audio: false
+          audio: false,
         });
 
         const video = videoRef.current!;
@@ -115,49 +107,70 @@ export default function GazeDemo({ consent }: Props) {
 
         const FaceMeshCtor = (window as any).FaceMesh;
         faceMesh = new FaceMeshCtor({
-          locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
+          locateFile: (file: string) =>
+            `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
         });
-
         faceMesh.setOptions({
           maxNumFaces: 1,
           refineLandmarks: true,
-          selfieMode: true
+          selfieMode: true,
         });
 
         faceMesh.onResults((res: Results) => {
           if (cancelled || !gp) return;
-
           const now = Date.now();
           const lm = res.multiFaceLandmarks?.[0];
-          const wCSS = canvas.clientWidth;
-          const hCSS = canvas.clientHeight;
 
           if (!lm) {
             setDebug("no face detected");
             setGaze(null);
-            ctx.clearRect(0, 0, wCSS, hCSS);
-            lastOutRef.current = null;
+            ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
             return;
           }
 
           const out = gp.compute(lm);
           if (!out) {
             setGaze(null);
-            ctx.clearRect(0, 0, wCSS, hCSS);
-            lastOutRef.current = null;
+            ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
             return;
           }
-
-          lastOutRef.current = { ox: out.ox, oy: out.oy, x: out.x, y: out.y };
 
           if (now - lastSetRef.current > 100) {
             lastSetRef.current = now;
             setGaze(out);
           }
 
-          if (now - lastDrawRef.current > 33) {
-            lastDrawRef.current = now;
-            drawVector(ctx, wCSS, hCSS, [out.ox, out.oy], out.x, out.y);
+          const leftEAR =
+            (euclidean(lm[159], lm[145]) + euclidean(lm[158], lm[153])) /
+            (2.0 * euclidean(lm[33], lm[133]));
+          const rightEAR =
+            (euclidean(lm[386], lm[374]) + euclidean(lm[385], lm[380])) /
+            (2.0 * euclidean(lm[362], lm[263]));
+          const ear = (leftEAR + rightEAR) / 2.0;
+          if (blinkManager.detectBlink(ear)) {
+            setBlinkText("BLINK!");
+            setTimeout(() => setBlinkText(""), 400);
+          }
+
+          let target: string | null = null;
+          if (out.theta_deg < -105 && out.theta_deg > -135) target = "tl";
+          else if (out.theta_deg > -70 && out.theta_deg <= -45) target = "tr";
+          else if (out.theta_deg <= -135 && out.theta_deg >= -180) target = "bl";
+          else if (out.theta_deg <= 0 && out.theta_deg >= -45) target = "br";
+          else target = null;
+
+          if (target === null) {
+            dwellStartRef.current = null;
+            setHoverTarget(null);
+          } else if (target !== hoverTarget) {
+            dwellStartRef.current = performance.now();
+            setHoverTarget(target);
+          } else if (target && dwellStartRef.current) {
+            const elapsed = performance.now() - dwellStartRef.current;
+            if (elapsed > DWELL_TIME) {
+              setSelected((prev) => [...prev, target]);
+              dwellStartRef.current = null;
+            }
           }
         });
 
@@ -179,109 +192,105 @@ export default function GazeDemo({ consent }: Props) {
       }
     })();
 
-    if ((performance as any).memory) {
-      heapIntervalRef.current = window.setInterval(() => {
-        const { usedJSHeapSize, totalJSHeapSize } = (performance as any).memory;
-        const used = (usedJSHeapSize / 1048576).toFixed(1);
-        const total = (totalJSHeapSize / 1048576).toFixed(1);
-        setHeapUsage(`${used} MB / ${total} MB`);
-      }, 3000);
-    }
-
     return () => {
       cancelled = true;
-
       const stream = videoRef.current?.srcObject as MediaStream | null;
-      stream?.getTracks().forEach(t => t.stop());
+      stream?.getTracks().forEach((t) => t.stop());
       if (videoRef.current) videoRef.current.srcObject = null;
-
       cancelAnimationFrame(animationIdRef.current);
-
-      faceMesh?.close?.().catch((err: any) => {
-        console.warn("FaceMesh cleanup error:", err);
-      });
-
+      faceMesh?.close?.().catch((err: any) => console.warn("FaceMesh cleanup error:", err));
       gp?.reset();
       gp = null;
-
-      if (heapIntervalRef.current) {
-        clearInterval(heapIntervalRef.current);
-        heapIntervalRef.current = null;
-      }
-
-      const canvas = canvasRef.current;
-      const ctx = canvas?.getContext("2d");
-      if (canvas && ctx) {
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
-
-      lastOutRef.current = null;
     };
-  }, [cameraConsent, active]);
-
-  const handleToggleCamera = () => {
-    setActive(prev => {
-      const next = !prev;
-      if (next) setCameraConsent(true);
-      return next;
-    });
-  };
+  }, [cameraConsent, active, blinkManager]);
 
   return (
-    <div style={{ width: "100%", height: "100%", margin: 0, padding: 0, overflow: "hidden", position: "relative" }}>
-      <div style={{ position: "relative", width: "100%", height: "100%" }}>
+    <div style={{ width: "100%", height: "100%", position: "relative" }}>
+      {/* Wrapper stays normal */}
+      <div
+        style={{
+          position: "relative",
+          width: "100%",
+          maxWidth: "960px",
+          aspectRatio: "16/9",
+          margin: "0 auto",
+          background: "#000",
+        }}
+      >
+        {/* Flip only the video and canvas */}
         <video
           ref={videoRef}
           muted
           playsInline
-          style={{ width: "100%", height: "100%", objectFit: "cover", background: "#000" }}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            background: "#000",
+            transform: "scaleX(-1)", // 👈 flip video only
+          }}
         />
         <canvas
           ref={canvasRef}
-          style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none" }}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            transform: "scaleX(-1)", // 👈 flip canvas only
+          }}
         />
+
+        {/* Targets stay normal (not flipped) */}
+        {TARGETS.map((t) => {
+          const isHover = hoverTarget === t.id;
+          return (
+            <div
+              key={t.id}
+              style={{
+                position: "absolute",
+                top: t.y,
+                left: t.x,
+                transform: "translate(-50%, -50%)",
+                width: "25%",
+                height: "25%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: isHover ? "#0afe0a" : "rgba(0,0,0,0.6)",
+                color: isHover ? "#000" : "#fff",
+                border: "2px solid #fff",
+                borderRadius: 6,
+                fontWeight: "bold",
+                transition: "all 0.2s ease",
+                fontSize: "clamp(12px, 2vw, 18px)",
+              }}
+            >
+              {t.label}
+            </div>
+          );
+        })}
       </div>
 
-      {consent && (
-        <button onClick={handleToggleCamera} style={{
-          position: "absolute",
-          top: "10%",
-          left: "10%",
-          padding: "8px 16px",
-          background: "#000",
-          color: "#0afe0a",
-          border: "1px solid #0afe0a",
-          borderRadius: 4,
-          fontSize: 16
-        }}>
-          {active ? "Disable Camera" : "Start Camera"}
-        </button>
+      {blinkText && (
+        <div
+          style={{
+            position: "absolute",
+            top: "20%",
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "rgba(0,0,0,0.8)",
+            color: "#0afe0a",
+            padding: "8px 16px",
+            borderRadius: 4,
+            fontFamily: "monospace",
+            zIndex: 2000,
+          }}
+        >
+          {blinkText}
+        </div>
       )}
-
-      <div style={{
-        position: "absolute",
-        bottom: 0,
-        right: 0,
-        padding: 12,
-        background: "rgba(0,0,0,0.7)",
-        color: "#0afe0a",
-        fontFamily: "monospace",
-        fontSize: 12,
-        maxWidth: "100vw"
-      }}>
-        <b>Debug:</b> {debug}<br />
-        <b>Heap:</b> {heapUsage}
-        <pre style={{
-          marginTop: 4,
-          whiteSpace: "pre-wrap",
-          wordWrap: "break-word",
-          maxHeight: 200,
-          overflowY: "auto"
-        }}>
-          {gaze ? JSON.stringify(gaze, null, 2) : "(waiting for gaze…)"}
-        </pre>
-      </div>
     </div>
   );
 }

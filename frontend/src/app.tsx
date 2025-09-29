@@ -15,6 +15,7 @@ const ANALYTICS_KEY = "iris_analytics_consent";
 export default function App() {
   const [consent, setConsent] = useState(false);
   const [cameraConsent, setCameraConsent] = useState(false);
+  const [active, setActive] = useState(false);
 
   // Restore consent on mount
   useEffect(() => {
@@ -33,6 +34,12 @@ export default function App() {
     setConsent(true);
   };
 
+  // Toggle camera on/off
+  const handleToggleCamera = () => {
+    setActive((prev) => !prev);
+    setCameraConsent(true); // ensures camera permission is marked
+  };
+
   return (
     <Router>
       <div className="app-root">
@@ -48,14 +55,25 @@ export default function App() {
                   <div className="background">
                     <section className="main-content" aria-label="Gaze Demo">
                       <div className="page-head">
-                        <h1 className="title">Gaze Calibration</h1>
+                        <h1 className="title">Gaze Demo</h1>
                         <p className="subtitle">
-                          Placeholder. Camera and test pointer are live, but no calibration targets are programmed at this time.
+                          Placeholder. Testing four targets at this time.
                         </p>
-                      </div>
+                        <p>
+                        {/* ✅ Camera toggle lives here */}
+                        <button onClick={handleToggleCamera} className="ctaDefault">
+                        {active ? "Stop Camera" : "Start Camera"}
+                      </button>
 
+                      </p>
+                      </div>
                       <hr className="header-divider" />
-                      <GazeDemo consent={consent} />
+
+                      <GazeDemo
+                        consent={consent}
+                        active={active}
+                        onToggleCamera={handleToggleCamera}
+                      />
 
                       <div className="info-text">
                         <h4>*No gaze analytics are being stored at this time.</h4>
@@ -68,10 +86,23 @@ export default function App() {
                       <details className="privacy-details" id="privacy">
                         <summary>Privacy & data handling</summary>
                         <ul>
-                          <li>Video stays on-device for inference; no raw frames are sent by default.</li>
-                          <li>Web analytics help performance and device monitoring (e.g., load time, device type, browser).</li>
-                          <li>“Derived data” includes normalized vectors and timing metrics only; it excludes images and identifiable A/V.</li>
-                          <li>You can revoke gaze analytics consent anytime via the checkbox below.</li>
+                          <li>
+                            Video stays on-device for inference; no raw frames
+                            are sent by default.
+                          </li>
+                          <li>
+                            Web analytics help performance and device monitoring
+                            (e.g., load time, device type, browser).
+                          </li>
+                          <li>
+                            “Derived data” includes normalized vectors and timing
+                            metrics only; it excludes images and identifiable
+                            A/V.
+                          </li>
+                          <li>
+                            You can revoke gaze analytics consent anytime via the
+                            checkbox below.
+                          </li>
                         </ul>
                       </details>
 
@@ -84,7 +115,8 @@ export default function App() {
                           aria-label="Consent to anonymized analytics"
                         />
                         <span>
-                          I consent to sending anonymized gaze analytics to the backend for analysis.
+                          I consent to sending anonymized gaze analytics to the
+                          backend for analysis.
                         </span>
                       </label>
                     </section>
@@ -101,13 +133,16 @@ export default function App() {
               path="/get-started"
               element={<GetStarted onEnableCamera={handleEnableCamera} />}
             />
-            <Route path="/demo" element={<GazeDemo consent={consent} />} />
-            <Route path="/learn-more" element={<LearnMore />} />
             <Route
-              path="/get-started"
-              element={<GetStarted onEnableCamera={handleEnableCamera} />}
+              path="/demo"
+              element={
+                <GazeDemo
+                  consent={consent}
+                  active={active}
+                  onToggleCamera={handleToggleCamera}
+                />
+              }
             />
-            <Route path="/demo" element={<GazeDemo consent={consent} />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route
               path="/contact-us"
