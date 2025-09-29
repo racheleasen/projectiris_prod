@@ -17,13 +17,13 @@ export default function Privacy() {
           <div className={styles.feature}>
             <FaVideo className={styles.featureIcon} />
             <h3>No Recordings</h3>
-            <p>Video stays on-device for inference; no raw frames are audio are sent by default.</p>
+            <p>Video stays on-device for inference; no raw frames or audio are sent by default.</p>
             <p></p>
           </div>
           <div className={styles.feature}>
             <FaUserSecret className={styles.featureIcon} />
             <h3>Anonymous</h3>
-            <p>Collected data includes ormalized vectors and timing metrics.</p>
+            <p>Collected data includes normalized vectors and timing metrics.</p>
           </div>
           <div className={styles.feature}>
             <FaLock className={styles.featureIcon} />
