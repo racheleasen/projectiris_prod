@@ -3,7 +3,7 @@
 // ---------- Constants ----------
 export const SQ5 = Math.sqrt(5);
 export const PHI = (1 + SQ5) / 2;                       // Golden ratio
-export const K = (3 * SQ5 - 7) / 2;                     // Custom scaling constant (unused here)
+export const K = (3 * SQ5 - 7) / 2;                     // Custom scaling constant used in dome()
 
 // ---------- Types ----------
 export type LM = { x: number; y: number };              // 2D landmark type
@@ -31,23 +31,10 @@ const LEFT_EYE: EyeSpec = {
   pupil: 473, corner1: 263, corner2: 362, upper: 386, lower: 374, irisRing: [474,475,476,477],
 };
 
-// ---------- Dome Function (final expression) ----------
-function dome(x: number, y: number): number {
-  const phi = 1.681;
-  const x2 = x * x;
-  const y2 = y * y;
-  const phi4 = Math.pow(phi, 4);
-  const phi8 = Math.pow(phi, 8);
-  const phi12 = Math.pow(phi, 12);
-  const phi16 = Math.pow(phi, 16);
-
-  const expX = Math.exp(x2 / phi4);
-  const expY = Math.exp(y2 / phi4);
-
-  const part1 = (8 * y2 * (2 * x2 + phi4) * expX) / phi16;
-  const part2 = (((8 * x2) / phi12) + (4 / phi8)) * expX;
-
-  return (part1 + part2) * expY;
+// ---------- Dome Function ----------
+function dome(x: number, y: number, k: number = K): number {
+  const r2 = x * x + y * y;
+  return Math.exp(-k * r2);                             // Gaussian-like radial decay
 }
 
 // ---------- Smoother for Gaze Stability ----------
@@ -73,6 +60,7 @@ class Smoother {
 
 // ---------- Bias Correction ----------
 function getBiasFromTheta(thetaDeg: number): number {
+  // Correct vertical bias in certain gaze angles
   if (-180 < thetaDeg && thetaDeg <= -135) return thetaDeg + 90;
   if ( -45 < thetaDeg && thetaDeg <=    0) return thetaDeg + 90;
   return 0;
@@ -102,6 +90,7 @@ function eyeCenterFromBuf(buf: Float32Array, c1: number, c2: number, u: number, 
 }
 
 function eyeRadiusFromBuf(buf: Float32Array, cx: number, cy: number, c1: number, c2: number, u: number, l: number, phi = PHI) {
+  // Average distance from eye center to corners/edges
   const d1 = Math.hypot(buf[c1] - cx, buf[c1+1] - cy);
   const d2 = Math.hypot(buf[c2] - cx, buf[c2+1] - cy);
   const d3 = Math.hypot(buf[u]  - cx, buf[u+1]  - cy);
@@ -116,7 +105,7 @@ function irisCenterFromBuf(buf: Float32Array, pupil: number, ring: number[]): [n
     sx += buf[r]; sy += buf[r+1];
   }
   const rx = sx / ring.length, ry = sy / ring.length;
-  return [0.6 * px + 0.4 * rx, 0.6 * py + 0.4 * ry];
+  return [0.6 * px + 0.4 * rx, 0.6 * py + 0.4 * ry];  // Blend of pupil + iris ring
 }
 
 function normalizedEyeOffset(buf: Float32Array, eye: EyeIdx, tmp: Float32Array, phi = PHI) {
@@ -130,7 +119,7 @@ function normalizedEyeOffset(buf: Float32Array, eye: EyeIdx, tmp: Float32Array, 
   const xNorm = (ix - ecx) / scale;
   const yNorm = (iy - ecy) / scale;
 
-  const inv = 1 / (dome(xNorm, yNorm) || 1);
+  const inv = 1 / (dome(xNorm, yNorm, PHI) || 1);  // Nonlinear radial rescaling
   return { x: xNorm * inv, y: yNorm * inv, ix, iy };
 }
 
@@ -166,6 +155,7 @@ export class GazeProjectionTS {
   computeTyped(buf: Float32Array, n: number): GazeResult | null {
     if (!buf || n < 478) return null;
 
+    // Get normalized offsets and iris centers
     const Loff = normalizedEyeOffset(buf, L, this.tmpL);
     const Roff = normalizedEyeOffset(buf, R, this.tmpR);
 
@@ -179,8 +169,9 @@ export class GazeProjectionTS {
     const [gx, gy] = this.smoother.update(bx, by);
     const radius = Math.hypot(gx, gy);
 
-    const z = Math.abs(dome(Loff.x, Loff.y) ** 2 + dome(Roff.x, Roff.y) ** 2);
+    const z = Math.abs(dome(Loff.x, Loff.y, PHI) ** 2 + dome(Roff.x, Roff.y, PHI) ** 2);
 
+    // Gaze origin = midpoint of iris centers
     let ox = 0.5 * (Loff.ix + Roff.ix);
     let oy = 0.5 * (Loff.iy + Roff.iy);
     if (this.mirrorX) ox = 1 - ox;
