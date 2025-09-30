@@ -18,10 +18,10 @@ type Target = {
 };
 
 const TARGETS: Target[] = [
-  { id: "tl", label: "Target 1", x: "25%", y: "25%" },
-  { id: "tr", label: "Target 2", x: "75%", y: "25%" },
-  { id: "bl", label: "Target 3", x: "25%", y: "75%" },
-  { id: "br", label: "Target 4", x: "75%", y: "75%" },
+  { id: "tl", label: "Target 1", x: "20%", y: "20%" },
+  { id: "tr", label: "Target 2", x: "80%", y: "20%" },
+  { id: "bl", label: "Target 3", x: "20%", y: "80%" },
+  { id: "br", label: "Target 4", x: "80%", y: "80%" },
 ];
 
 const DWELL_TIME = 1200;
