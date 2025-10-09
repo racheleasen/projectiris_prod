@@ -39,7 +39,6 @@ export default function GazeDemo({ consent, active }: Props) {
   const [cameraConsent, setCameraConsent] = useState(false);
   const [debug, setDebug] = useState("idle");
   const [gaze, setGaze] = useState<GazeResult | null>(null);
-  const [heapUsage, setHeapUsage] = useState("");
   const [blinkText, setBlinkText] = useState("");
 
   const [selected, setSelected] = useState<string[]>([]);
@@ -48,11 +47,11 @@ export default function GazeDemo({ consent, active }: Props) {
 
   const lastSetRef = useRef(0);
   const lastSendRef = useRef(0);
-  const heapIntervalRef = useRef<number | null>(null);
   const animationIdRef = useRef<number>(0);
 
   const blinkManager = useRef(new BlinkManager()).current;
 
+  // ---------- Canvas Resize ----------
   const resizeCanvasToDisplaySize = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -79,12 +78,22 @@ export default function GazeDemo({ consent, active }: Props) {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
+  // ---------- Consent ----------
   useEffect(() => {
     if (consent) setCameraConsent(true);
   }, [consent]);
 
+  // ---------- Camera + FaceMesh Loop ----------
   useEffect(() => {
     if (!cameraConsent || !active) return;
+
+    // ✅ Reset session-specific state when camera restarts
+    setHoverTarget(null);
+    setSelected([]);
+    dwellStartRef.current = null;
+    lastSetRef.current = 0;
+    lastSendRef.current = 0;
+    blinkManager.reset?.();
 
     let cancelled = false;
     let gp: GazeProjectionTS | null = new GazeProjectionTS(true);
@@ -135,11 +144,13 @@ export default function GazeDemo({ consent, active }: Props) {
             return;
           }
 
+          // throttle gaze updates
           if (now - lastSetRef.current > 100) {
             lastSetRef.current = now;
             setGaze(out);
           }
 
+          // --- Blink detection ---
           const leftEAR =
             (euclidean(lm[159], lm[145]) + euclidean(lm[158], lm[153])) /
             (2.0 * euclidean(lm[33], lm[133]));
@@ -152,14 +163,14 @@ export default function GazeDemo({ consent, active }: Props) {
             setTimeout(() => setBlinkText(""), 400);
           }
 
+          // --- Target selection logic ---
           let target: string | null = null;
           if (out.theta_deg < -105 && out.theta_deg > -135) target = "tl";
           else if (out.theta_deg > -70 && out.theta_deg <= -45) target = "tr";
           else if (out.theta_deg <= -135 && out.theta_deg >= -180) target = "bl";
           else if (out.theta_deg <= 0 && out.theta_deg >= -45) target = "br";
-          else target = null;
 
-          if (target === null) {
+          if (!target) {
             dwellStartRef.current = null;
             setHoverTarget(null);
           } else if (target !== hoverTarget) {
@@ -174,6 +185,7 @@ export default function GazeDemo({ consent, active }: Props) {
           }
         });
 
+        // --- Main animation loop ---
         const tick = async () => {
           if (cancelled || !gp) return;
           const now = Date.now();
@@ -192,6 +204,7 @@ export default function GazeDemo({ consent, active }: Props) {
       }
     })();
 
+    // --- Cleanup on camera stop ---
     return () => {
       cancelled = true;
       const stream = videoRef.current?.srcObject as MediaStream | null;
@@ -201,12 +214,16 @@ export default function GazeDemo({ consent, active }: Props) {
       faceMesh?.close?.().catch((err: any) => console.warn("FaceMesh cleanup error:", err));
       gp?.reset();
       gp = null;
+
+      // reset UI state
+      setHoverTarget(null);
+      dwellStartRef.current = null;
     };
   }, [cameraConsent, active, blinkManager]);
 
+  // ---------- Render ----------
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
-      {/* Wrapper stays normal */}
       <div
         style={{
           position: "relative",
@@ -217,7 +234,7 @@ export default function GazeDemo({ consent, active }: Props) {
           background: "#000",
         }}
       >
-        {/* Flip only the video and canvas */}
+        {/* Flip video + canvas horizontally */}
         <video
           ref={videoRef}
           muted
@@ -227,7 +244,7 @@ export default function GazeDemo({ consent, active }: Props) {
             height: "100%",
             objectFit: "cover",
             background: "#000",
-            transform: "scaleX(-1)", // 👈 flip video only
+            transform: "scaleX(-1)",
           }}
         />
         <canvas
@@ -238,11 +255,11 @@ export default function GazeDemo({ consent, active }: Props) {
             left: 0,
             width: "100%",
             height: "100%",
-            transform: "scaleX(-1)", // 👈 flip canvas only
+            transform: "scaleX(-1)",
           }}
         />
 
-        {/* Targets stay normal (not flipped) */}
+        {/* Target boxes */}
         {TARGETS.map((t) => {
           const isHover = hoverTarget === t.id;
           return (
@@ -273,6 +290,7 @@ export default function GazeDemo({ consent, active }: Props) {
         })}
       </div>
 
+      {/* Blink Overlay */}
       {blinkText && (
         <div
           style={{
